@@ -58,6 +58,7 @@ class PantallaAdmin:
         marca = "" if es_principal else "  [Solo Admin Principal]"
         opciones = [
             "Alertas de stock bajo",
+            "Consultar stock del inventario",
             f"Resumen financiero{marca}",
             "Registrar compra a proveedor",
             "Registrar nuevo insumo",
@@ -76,33 +77,38 @@ class PantallaAdmin:
             if idx == 0:
                 self._alertas_stock()
             elif idx == 1:
+                self._consultar_stock()
+            elif idx == 2:
                 if not es_principal:
                     _acceso_denegado()
                 else:
                     self._resumen_financiero()
-            elif idx == 2:
-                self._registrar_compra()
             elif idx == 3:
-                self._registrar_insumo()
+                self._registrar_compra()
             elif idx == 4:
-                if not es_principal:
-                    _acceso_denegado()
-                else:
-                    self._asignar_insumo_receta()
+                self._registrar_insumo()
             elif idx == 5:
                 if not es_principal:
                     _acceso_denegado()
                 else:
-                    self._alta_producto()
+                    self._asignar_insumo_receta()
             elif idx == 6:
-                self._menu_consultas()
+                if not es_principal:
+                    _acceso_denegado()
+                else:
+                    self._alta_producto()
             elif idx == 7:
-                self._gestion_empleados()
+                self._menu_consultas()
             elif idx == 8:
+                self._gestion_empleados()
+            elif idx == 9:
                 return
             
     def _alertas_stock(self):
         self.inventario_ui.alertas_stock()
+
+    def _consultar_stock(self):
+        self.inventario_ui.consultar_stock()
 
     def _resumen_financiero(self):
         periodos = ["HOY", "SEMANA", "MES", "ANIO"]

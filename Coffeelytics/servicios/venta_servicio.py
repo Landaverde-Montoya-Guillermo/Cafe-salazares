@@ -3,7 +3,7 @@ from decimal import Decimal
 from mysql.connector import Error
 from config.database import transaccion
 from config.reglas import IVA_FRONTERA
-from entidades.base import StockInsuficienteError
+from entidades.base import StockInsuficienteError, ValidacionError
 from repositorios.venta_repositorios import VentaRepositorio
 from repositorios.producto_repositorio import ProductoRepositorio
 from repositorios.insumo_repositorio import InsumoRepositorio
@@ -27,6 +27,11 @@ class VentaServicio:
                 for item in carrito.items.values():
                     prod = item["producto"]
                     cant = Decimal(str(item["cantidad"]))
+                    if not prod_repo.es_vendible(prod.codigo):
+                        raise ValidacionError(
+                            f"El producto '{prod.nombre}' ya no esta activo "
+                            "o no tiene insumos en su receta."
+                        )
                     receta = prod_repo.obtener_receta(prod.codigo)
                     for ing in receta:
                         cod_ins = ing["insumo_codigo"]
@@ -74,6 +79,8 @@ class VentaServicio:
 
             return True, f"Venta #{folio} registrada.", folio
         except StockInsuficienteError as e:
+            return False, str(e), None
+        except ValidacionError as e:
             return False, str(e), None
         except Error as e:
             return False, f"Error en venta: {str(e)}", None

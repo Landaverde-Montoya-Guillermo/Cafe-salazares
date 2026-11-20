@@ -3,6 +3,7 @@ import sys
 import shutil
 import getpass
 import datetime
+import math
 
 from interfaz.estilos import Color
 from config.negocio import INFO_CAFETERIA, LINEAS_BANNER_GRANDE
@@ -307,7 +308,7 @@ def imprimir_caja_credenciales():
 
 # ── TABLA UNICODE CON CUADRICULA COMPLETA ────────────────────────────────────
 
-def imprimir_tabla(titulo, columnas, filas, ancho_min=12):
+def imprimir_tabla(titulo, columnas, filas, ancho_min=12, retornar_texto=False):
     ancho = _ancho()
     pfx   = _prefijo(ancho)
 
@@ -346,20 +347,26 @@ def imprimir_tabla(titulo, columnas, filas, ancho_min=12):
             partes.append(f"  {color_celdas}{txt:<{a}}{Color.RESET}  ")
         return pfx + "  ║" + "│".join(partes) + "║"
 
-    print(f"\n{pfx}  {Color.titulo(titulo)}")
-    print(sep_top)
-    print(fila_str(columnas, Color.CARAMELO + Color.BOLD))
-    print(sep_hdr)
+    lineas = [
+        f"\n{pfx}  {Color.titulo(titulo)}",
+        sep_top,
+        fila_str(columnas, Color.CARAMELO + Color.BOLD),
+        sep_hdr,
+    ]
     if not filas:
-        print(fila_str(["(Sin registros)"] + [""] * (len(columnas) - 1)))
+        lineas.append(fila_str(["(Sin registros)"] + [""] * (len(columnas) - 1)))
     else:
         for idx, fila in enumerate(filas):
             fila_norm = list(fila) + [""] * (len(columnas) - len(fila))
             color = Color.CREMA if idx % 2 == 0 else Color.GRIS
-            print(fila_str(fila_norm[:len(columnas)], color))
+            lineas.append(fila_str(fila_norm[:len(columnas)], color))
             if idx < len(filas) - 1:
-                print(sep_mid)
-    print(sep_bot)
+                lineas.append(sep_mid)
+    lineas.append(sep_bot)
+    texto = "\n".join(lineas)
+    if retornar_texto:
+        return texto
+    print(texto)
 
 
 # ── ENTRADA DE CONTRASENA OCULTA ─────────────────────────────────────────────
@@ -367,7 +374,9 @@ def imprimir_tabla(titulo, columnas, filas, ancho_min=12):
 def pedir_contrasena(prompt="  Contrasena: "):
     ancho = _ancho()
     pfx   = _prefijo(ancho)
-    return input(pfx + prompt)
+    raw = input(pfx + prompt)
+    _verificar_cancelacion(raw)
+    return raw
 
 
 # ── FUNCIONES DE ENTRADA VALIDADA CON NORMALIZACION ──────────────────────────
@@ -401,22 +410,23 @@ def _input_centrado(prompt):
     return input().strip()
 
 
-def pedir_correo(prompt="Correo electronico", obligatorio=True):
+def pedir_correo(prompt="Correo electronico", obligatorio=True, aceptar_salir=False):
     _imprimir_guia(
         "Correo electronico del usuario",
         "usuario@dominio.com  (sin espacios, con @ y punto en dominio)",
         "ejemplo@coffeelytics.com",
         "Se convierte automaticamente a minusculas."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        val = raw.lower()
-        if not obligatorio and val == "":
-            return val
-        if "@" in val and "." in val.split("@")[-1] and " " not in val:
-            return val
-        print(Color.error("Formato invalido. Debe contener '@' y dominio con punto. Sin espacios."))
+    raw = _input_centrado(prompt)
+    if aceptar_salir and raw.strip().upper() == "SALIR":
+        raise OperacionCancelada("Operacion cancelada por el usuario.")
+    _verificar_cancelacion(raw)
+    val = raw.lower()
+    if not obligatorio and val == "":
+        return val
+    if "@" in val and "." in val.split("@")[-1] and " " not in val:
+        return val
+    raise ValueError("Formato invalido. Debe contener '@' y dominio con punto. Sin espacios.")
 
 
 def pedir_codigo(prompt="Codigo", longitud_max=10, ejemplo="INS008"):
@@ -426,14 +436,13 @@ def pedir_codigo(prompt="Codigo", longitud_max=10, ejemplo="INS008"):
         ejemplo,
         "Se convierte automaticamente a MAYUSCULAS."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        val = raw.upper()
-        if val and len(val) <= longitud_max and val.replace("-", "").replace("_", "").isalnum():
-            return val
-        print(Color.error(
-            f"Codigo invalido. Solo letras y numeros, sin espacios, maximo {longitud_max} caracteres."))
+    raw = _input_centrado(prompt)
+    _verificar_cancelacion(raw)
+    val = raw.upper()
+    if val and len(val) <= longitud_max and val.replace("-", "").replace("_", "").isalnum():
+        return val
+    raise ValueError(
+        f"Codigo invalido. Solo letras y numeros, sin espacios, maximo {longitud_max} caracteres.")
 
 
 def pedir_nombre_propio(prompt="Nombre", max_len=50, ejemplo="Juan Perez"):
@@ -443,16 +452,14 @@ def pedir_nombre_propio(prompt="Nombre", max_len=50, ejemplo="Juan Perez"):
         ejemplo,
         "Se ajusta automaticamente a Formato Titulo: 'juan perez' -> 'Juan Perez'."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        val = raw.title()
-        if val and len(val) <= max_len:
-            return val
-        if not val:
-            print(Color.error("El nombre no puede estar vacio."))
-        else:
-            print(Color.error(f"El nombre no puede superar {max_len} caracteres."))
+    raw = _input_centrado(prompt)
+    _verificar_cancelacion(raw)
+    val = raw.title()
+    if val and len(val) <= max_len:
+        return val
+    if not val:
+        raise ValueError("El nombre no puede estar vacio.")
+    raise ValueError(f"El nombre no puede superar {max_len} caracteres.")
 
 
 def pedir_rfc(prompt="RFC"):
@@ -462,13 +469,12 @@ def pedir_rfc(prompt="RFC"):
         "COF260101TJ8  o  VECJ880326XXX",
         "Se convierte automaticamente a MAYUSCULAS."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        val = raw.upper().replace("-", "").replace(" ", "")
-        if 12 <= len(val) <= 13 and val.isalnum():
-            return val
-        print(Color.error("RFC invalido. Debe tener 12 o 13 caracteres alfanumericos sin espacios."))
+    raw = _input_centrado(prompt)
+    _verificar_cancelacion(raw)
+    val = raw.upper().replace("-", "").replace(" ", "")
+    if 12 <= len(val) <= 13 and val.isalnum():
+        return val
+    raise ValueError("RFC invalido. Debe tener 12 o 13 caracteres alfanumericos sin espacios.")
 
 
 def pedir_telefono(prompt="Telefono"):
@@ -478,13 +484,12 @@ def pedir_telefono(prompt="Telefono"):
         "6641234567",
         "Se valida que sea exactamente 10 digitos."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        val = raw.replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
-        if val.isdigit() and len(val) == 10:
-            return val
-        print(Color.error("Telefono invalido. Debe tener exactamente 10 digitos numericos."))
+    raw = _input_centrado(prompt)
+    _verificar_cancelacion(raw)
+    val = raw.replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+    if val.isdigit() and len(val) == 10:
+        return val
+    raise ValueError("Telefono invalido. Debe tener exactamente 10 digitos numericos.")
 
 
 def pedir_numero_positivo(prompt="Cantidad", unidad="", ejemplo="1000",
@@ -495,25 +500,20 @@ def pedir_numero_positivo(prompt="Cantidad", unidad="", ejemplo="1000",
         f"{nombre_campo.capitalize()} numerica mayor a cero",
         f"Numero entero o decimal positivo{' en ' + unidad if unidad else ''}",
         ejemplo,
-        f"Se registra en la base de datos inmediatamente al confirmar.{desc_stock}"
+        f"Se validara antes de registrar.{desc_stock}"
     )
-    while True:
-        raw = _input_centrado(f"{prompt}{' (' + unidad + ')' if unidad else ''}")
-        _verificar_cancelacion(raw)
-        try:
-            val = float(raw)
-            if val <= 0:
-                raise ValueError
-            if stock_max is not None and val > float(stock_max):
-                print(Color.error(
-                    f"La cantidad ({val}) supera el stock disponible ({stock_max} {unidad})."))
-                continue
-            return val
-        except ValueError:
-            if not raw.strip():
-                print(Color.error("Valor invalido. Ingresa un numero, no puede estar vacio."))
-            else:
-                print(Color.error(f"Valor invalido. '{raw.strip()}' no es un numero positivo."))
+    raw = _input_centrado(f"{prompt}{' (' + unidad + ')' if unidad else ''}")
+    _verificar_cancelacion(raw)
+    try:
+        val = float(raw)
+    except ValueError:
+        raise ValueError(f"Valor invalido. '{raw.strip()}' no es un numero positivo.")
+    if not math.isfinite(val) or val <= 0:
+        raise ValueError("La cantidad debe ser un numero finito mayor a cero.")
+    if stock_max is not None and val > float(stock_max):
+        raise ValueError(
+            f"La cantidad ({val}) supera el stock disponible ({stock_max} {unidad}).")
+    return val
 
 
 def pedir_precio(prompt="Precio unitario ($MXN)", ejemplo="0.85"):
@@ -523,16 +523,15 @@ def pedir_precio(prompt="Precio unitario ($MXN)", ejemplo="0.85"):
         ejemplo,
         "El sistema calculara IVA 8% (proveedor frontera) o 16% (interior) automaticamente."
     )
-    while True:
-        raw = _input_centrado(f"{prompt} $")
-        _verificar_cancelacion(raw)
-        try:
-            val = float(raw)
-            if val > 0:
-                return val
-            raise ValueError
-        except ValueError:
-            print(Color.error("Precio invalido. Ingresa un numero mayor a 0 (ej. 0.85 o 150)."))
+    raw = _input_centrado(f"{prompt} $")
+    _verificar_cancelacion(raw)
+    try:
+        val = float(raw)
+    except ValueError:
+        raise ValueError("Precio invalido. Ingresa un numero mayor a 0 (ej. 0.85 o 150).")
+    if math.isfinite(val) and val > 0:
+        return val
+    raise ValueError("Precio invalido. Ingresa un numero mayor a 0 (ej. 0.85 o 150).")
 
 
 def pedir_motivo(prompt="Motivo", ejemplo="Derrame accidental en barra"):
@@ -542,16 +541,14 @@ def pedir_motivo(prompt="Motivo", ejemplo="Derrame accidental en barra"):
         ejemplo,
         "La primera letra se convierte automaticamente a mayuscula."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        val = raw.capitalize()
-        if val and len(val) <= 300:
-            return val
-        if not val:
-            print(Color.error("El motivo no puede estar vacio."))
-        else:
-            print(Color.error("El motivo no puede superar 300 caracteres."))
+    raw = _input_centrado(prompt)
+    _verificar_cancelacion(raw)
+    val = raw.capitalize()
+    if val and len(val) <= 300:
+        return val
+    if not val:
+        raise ValueError("El motivo no puede estar vacio.")
+    raise ValueError("El motivo no puede superar 300 caracteres.")
 
 
 def pedir_fecha(prompt="Fecha (YYYY-MM-DD)"):
@@ -561,14 +558,13 @@ def pedir_fecha(prompt="Fecha (YYYY-MM-DD)"):
         datetime.datetime.now().strftime("%Y-%m-%d"),
         "El sistema buscara todas las ventas de ese empleado en esa fecha exacta."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        try:
-            datetime.datetime.strptime(raw, "%Y-%m-%d")
-            return raw
-        except ValueError:
-            print(Color.error("Formato invalido. Usa YYYY-MM-DD (ej. 2024-12-25)."))
+    raw = _input_centrado(prompt)
+    _verificar_cancelacion(raw)
+    try:
+        datetime.datetime.strptime(raw, "%Y-%m-%d")
+        return raw
+    except ValueError:
+        raise ValueError("Formato invalido. Usa YYYY-MM-DD (ej. 2024-12-25).")
 
 
 def pedir_entero_positivo(prompt="Folio", ejemplo="5"):
@@ -578,12 +574,11 @@ def pedir_entero_positivo(prompt="Folio", ejemplo="5"):
         ejemplo,
         "El sistema buscara el registro con ese folio en la base de datos."
     )
-    while True:
-        raw = _input_centrado(prompt)
-        _verificar_cancelacion(raw)
-        if raw.isdigit() and int(raw) > 0:
-            return int(raw)
-        print(Color.error("Folio invalido. Ingresa un numero entero positivo."))
+    raw = _input_centrado(prompt)
+    _verificar_cancelacion(raw)
+    if raw.isdigit() and int(raw) > 0:
+        return int(raw)
+    raise ValueError("Folio invalido. Ingresa un numero entero positivo.")
 
 
 def pedir_nombre_cliente():
@@ -596,8 +591,9 @@ def pedir_nombre_cliente():
     raw = _input_centrado("Nombre del cliente (ENTER = Mostrador)")
     if not raw:
         return "Mostrador"
-    if raw.strip().upper() in ("0", "CANCELAR"):
-        return "Mostrador"
+    _verificar_cancelacion(raw)
+    if len(raw) > 50:
+        raise ValueError("El nombre del cliente no puede superar 50 caracteres.")
     return raw.title()[:50]
 
 
@@ -608,18 +604,19 @@ def pedir_monto_efectivo(total):
         f"{total:.2f}  o  200.00",
         f"El sistema calculara el cambio automaticamente: cambio = monto - ${total:.2f}."
     )
-    while True:
-        raw = _input_centrado("Monto recibido $")
-        _verificar_cancelacion(raw)
-        try:
-            val = float(raw)
-            if val >= total:
-                cambio = round(val - total, 2)
-                print(Color.ok(f"Cambio: ${cambio:.2f}"))
-                return val, cambio
-            print(Color.error(f"Monto insuficiente. El total es ${total:.2f}."))
-        except ValueError:
-            print(Color.error("Ingresa una cantidad numerica valida (ej. 200 o 150.50)."))
+    raw = _input_centrado("Monto recibido $")
+    _verificar_cancelacion(raw)
+    try:
+        val = float(raw)
+    except ValueError:
+        raise ValueError("Ingresa una cantidad numerica valida (ej. 200 o 150.50).")
+    if not math.isfinite(val):
+        raise ValueError("Ingresa una cantidad numerica valida y finita.")
+    if val >= total:
+        cambio = round(val - total, 2)
+        print(Color.ok(f"Cambio: ${cambio:.2f}"))
+        return val, cambio
+    raise ValueError(f"Monto insuficiente. El total es ${total:.2f}.")
 
 
 def pedir_cantidad_carrito(nombre_producto):
@@ -630,12 +627,13 @@ def pedir_cantidad_carrito(nombre_producto):
         "Se suma al carrito activo. Puedes agregar mas unidades del mismo producto."
     )
     raw = _input_centrado("Cantidad (ENTER = 1)")
-    if raw == "" or raw.strip().upper() in ("0", "CANCELAR"):
+    _verificar_cancelacion(raw)
+    if raw == "":
         return 1
     try:
         cant = int(raw)
         if cant > 0:
             return cant
     except ValueError:
-        pass
-    return 1
+        raise ValueError("La cantidad debe ser un numero entero positivo.")
+    raise ValueError("La cantidad debe ser un numero entero positivo.")

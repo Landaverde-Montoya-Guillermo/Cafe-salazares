@@ -19,10 +19,10 @@ class BaristaCarrito:
             limpiar_pantalla()
             enc = imprimir_encabezado_sesion(
                 self.usuario,
-                breadcrumb=["Inicio", "Panel Barista", "Carrito"]
+                breadcrumb=["Inicio", "Panel Barista", "Nueva Venta", "Carrito"]
             )
-            print(enc)
             if not self.carrito.items:
+                print(enc)
                 print(Color.aviso("\n  El carrito esta vacio."))
                 pausar()
                 return
@@ -32,14 +32,18 @@ class BaristaCarrito:
                 p = item["producto"]
                 filas.append((p.codigo, p.nombre, f"${p.precio:.2f}",
                               item["cantidad"], f"${p.precio * item['cantidad']:.2f}"))
-            imprimir_tabla("CARRITO ACTUAL", cols, filas)
+            tabla = imprimir_tabla(
+                "CARRITO ACTUAL", cols, filas, retornar_texto=True
+            )
             sub = self.carrito.calcular_subtotal()
             iva = self.carrito.calcular_iva()
             tot = self.carrito.calcular_total()
             pfx = _prefijo(_ancho())
-            print(f"\n{pfx}  Subtotal: {Color.CREMA}${sub:.2f}{Color.RESET}  "
-                  f"IVA 8%: {Color.CREMA}${iva:.2f}{Color.RESET}  "
-                  f"TOTAL: {Color.CARAMELO}{Color.BOLD}${tot:.2f}{Color.RESET}")
+            resumen = (
+                f"\n{pfx}  Subtotal: {Color.CREMA}${sub:.2f}{Color.RESET}  "
+                f"IVA 8%: {Color.CREMA}${iva:.2f}{Color.RESET}  "
+                f"TOTAL: {Color.CARAMELO}{Color.BOLD}${tot:.2f}{Color.RESET}"
+            )
 
             opts = [
                 "Cobrar (procesar pago)",
@@ -49,9 +53,12 @@ class BaristaCarrito:
             ]
             enc2 = imprimir_encabezado_sesion(
                 self.usuario,
-                breadcrumb=["Inicio", "Panel Barista", "Carrito"]
+                breadcrumb=["Inicio", "Panel Barista", "Nueva Venta", "Carrito"]
             )
-            idx = seleccionar_con_flechas("Que deseas hacer?", opts, enc2)
+            encabezado_carrito = f"{enc2}{tabla}{resumen}"
+            idx = seleccionar_con_flechas(
+                "Que deseas hacer?", opts, encabezado_carrito
+            )
             if idx == 0:
                 modal = ModalCobro(self.usuario, self.carrito, self.venta_srv, self.reportes)
                 if modal.procesar():
@@ -74,7 +81,10 @@ class BaristaCarrito:
         ] + ["<< Cancelar"]
         enc = imprimir_encabezado_sesion(
             self.usuario,
-            breadcrumb=["Inicio", "Panel Barista", "Carrito", "Quitar producto"]
+            breadcrumb=[
+                "Inicio", "Panel Barista", "Nueva Venta",
+                "Carrito", "Quitar producto"
+            ]
         )
         idx = seleccionar_con_flechas("Selecciona producto a quitar", nombres, enc)
         if idx < len(codigos):

@@ -21,8 +21,10 @@ class PantallaBarista:
 
     def mostrar(self):
         carrito = CarritoVenta()
-        catalogo_ui = BaristaCatalogo(self.usuario, self.producto_srv, carrito)
         carrito_ui = BaristaCarrito(self.usuario, self.venta_srv, carrito, self.reportes)
+        catalogo_ui = BaristaCatalogo(
+            self.usuario, self.producto_srv, carrito, carrito_ui
+        )
         operaciones_ui = BaristaOperaciones(
             self.usuario,
             self.inventario_srv,
@@ -32,7 +34,6 @@ class PantallaBarista:
         )
         opciones = [
             "Nueva venta - Catalogo de productos",
-            "Ver / gestionar carrito",
             "Registrar merma",
             "Surtir mesa de consumibles",
             "Mi cuenta (desactivar)",
@@ -47,13 +48,11 @@ class PantallaBarista:
             if idx == 0:
                 catalogo_ui.catalogo_productos()
             elif idx == 1:
-                carrito_ui.gestionar_carrito()
-            elif idx == 2:
                 operaciones_ui.registrar_merma()
-            elif idx == 3:
+            elif idx == 2:
                 operaciones_ui.surtir_mesa()
-            elif idx == 4:
+            elif idx == 3:
                 if operaciones_ui.desactivar_mi_cuenta():
                     return
-            elif idx == 5:
+            elif idx == 4:
                 return
