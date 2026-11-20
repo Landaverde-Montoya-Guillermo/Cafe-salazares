@@ -85,6 +85,19 @@ class ConsultasRepositorio(BaseRepositorio):
         """)
         return self._cursor.fetchall()
 
+    def merma_por_folio(self, folio):
+        self._cursor.execute("""
+            SELECT m.codigo, m.fecha, i.nombre AS insumo,
+                   CONCAT(m.cantidad,' ',u.abreviatura) AS cantidad,
+                   tm.nombre AS tipo_merma, m.motivo
+            FROM merma m
+            INNER JOIN insumo i        ON m.insumo = i.codigo
+            INNER JOIN unidad_medida u ON i.unidad = u.codigo
+            INNER JOIN tipo_merma tm   ON m.tipo   = tm.codigo
+            WHERE m.codigo = %s
+        """, (folio,))
+        return self._cursor.fetchone()
+
     def ventas_por_empleado_fecha(self, num_empleado, fecha_str):
         self._cursor.execute("""
             SELECT v.codigo AS folio, v.fecha, v.nombreCliente,

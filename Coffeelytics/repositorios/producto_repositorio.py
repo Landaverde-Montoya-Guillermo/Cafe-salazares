@@ -58,16 +58,25 @@ class ProductoRepositorio(BaseRepositorio):
             (nuevo_estatus, cod_producto)
         )
 
-    def obtener_receta(self, cod_producto):
-        self._cursor.execute("""
-            SELECT i.codigo, i.nombre, ri.cantidad AS requerido,
-                   i.stockActual, u.abreviatura
+    def obtener_receta(self, prod_codigo):
+        self._cursor.execute(
+            """
+            SELECT i.codigo AS insumo_codigo,
+                   i.nombre,
+                   ri.cantidad,
+                   ri.cantidad AS requerido,
+                   i.stockActual,
+                   u.abreviatura,
+                   u.abreviatura AS unidad_medida
             FROM receta r
-            INNER JOIN rec_insum ri    ON r.codigo  = ri.receta
-            INNER JOIN insumo i        ON ri.insumo = i.codigo
-            INNER JOIN unidad_medida u ON i.unidad  = u.codigo
+            JOIN rec_insum ri ON r.codigo = ri.receta
+            JOIN insumo i ON ri.insumo = i.codigo
+            JOIN unidad_medida u ON i.unidad = u.codigo
             WHERE r.producto = %s
-        """, (cod_producto,))
+            ORDER BY i.nombre
+            """,
+            (prod_codigo,)
+        )
         return self._cursor.fetchall()
 
     def obtener_codigo_receta(self, cod_producto):
@@ -76,6 +85,10 @@ class ProductoRepositorio(BaseRepositorio):
         if not fila:
             return None
         return fila["codigo"] if isinstance(fila, dict) else fila[0]
+
+    def existe_codigo_receta(self, cod_receta):
+        self._cursor.execute("SELECT 1 FROM receta WHERE codigo = %s", (cod_receta,))
+        return self._cursor.fetchone() is not None
 
     def crear_receta(self, cod_receta, cod_producto):
         self._cursor.execute(

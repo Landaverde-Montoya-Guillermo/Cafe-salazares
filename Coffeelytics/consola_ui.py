@@ -367,27 +367,7 @@ def imprimir_tabla(titulo, columnas, filas, ancho_min=12):
 def pedir_contrasena(prompt="  Contrasena: "):
     ancho = _ancho()
     pfx   = _prefijo(ancho)
-    if sys.platform == "win32":
-        import msvcrt
-        print(pfx + prompt, end="", flush=True)
-        chars = []
-        while True:
-            ch = msvcrt.getch()
-            if ch in (b'\r', b'\n'):
-                print()
-                break
-            elif ch == b'\x08':
-                if chars:
-                    chars.pop()
-                    print("\b \b", end="", flush=True)
-            elif ch == b'\x03':
-                raise KeyboardInterrupt
-            else:
-                chars.append(ch.decode("utf-8", errors="replace"))
-                print("*", end="", flush=True)
-        return "".join(chars)
-    else:
-        return getpass.getpass(pfx + prompt)
+    return input(pfx + prompt)
 
 
 # ── FUNCIONES DE ENTRADA VALIDADA CON NORMALIZACION ──────────────────────────
@@ -530,8 +510,10 @@ def pedir_numero_positivo(prompt="Cantidad", unidad="", ejemplo="1000",
                 continue
             return val
         except ValueError:
-            print(Color.error(
-                f"Valor invalido. Ingresa un numero positivo{' mayor a 0' if not raw else ''}."))
+            if not raw.strip():
+                print(Color.error("Valor invalido. Ingresa un numero, no puede estar vacio."))
+            else:
+                print(Color.error(f"Valor invalido. '{raw.strip()}' no es un numero positivo."))
 
 
 def pedir_precio(prompt="Precio unitario ($MXN)", ejemplo="0.85"):

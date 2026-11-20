@@ -1,3 +1,19 @@
+-- Active: 1795140631459@@127.0.0.1@3306@bd_coffeelytics
+-- ============================================================================
+-- ARCHIVO: bd_coffeelytics.sql
+-- UBICACIÓN: coffeelytics/bd_coffeelytics.sql
+-- DESCRIPCIÓN: Base de datos relacional corregida para Coffeelytics (22 tablas)
+--              con datos iniciales y registros de prueba.
+-- ============================================================================
+
+DROP DATABASE IF EXISTS bd_coffeelytics;
+CREATE DATABASE bd_coffeelytics CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE bd_coffeelytics;
+
+-- ----------------------------------------------------------------------------
+-- 1. CATÁLOGOS INDEPENDIENTES
+-- ----------------------------------------------------------------------------
+
 CREATE TABLE proveedor (
     codigo VARCHAR(4) NOT NULL,
     nombre VARCHAR(30) NOT NULL,
@@ -64,6 +80,9 @@ CREATE TABLE metodo_pago (
     UNIQUE (descripcion)
 );
 
+-- ----------------------------------------------------------------------------
+-- 2. ENTIDADES PRINCIPALES
+-- ----------------------------------------------------------------------------
 
 CREATE TABLE producto (
     codigo VARCHAR(4) NOT NULL,
@@ -173,6 +192,10 @@ CREATE TABLE merma (
     FOREIGN KEY (tipo) REFERENCES tipo_merma(codigo),
     FOREIGN KEY (insumo) REFERENCES insumo(codigo)
 );
+
+-- ----------------------------------------------------------------------------
+-- 3. TABLAS INTERMEDIAS (RELACIONES MUCHOS A MUCHOS)
+-- ----------------------------------------------------------------------------
 
 CREATE TABLE prod_venta (
     venta INT NOT NULL,
@@ -358,3 +381,8 @@ INSERT INTO merma (motivo, fecha, cantidad, tipo, insumo) VALUES
 ('Galleta vencida de lote anterior', DATE_SUB(CURDATE(), INTERVAL 3 DAY), 2.00, 'TM002', 'INS006'),
 ('Jarabe de calabaza derramado', DATE_SUB(CURDATE(), INTERVAL 3 DAY), 40.00, 'TM001', 'INS004');
 
+DELETE FROM rec_insum WHERE receta IN (
+    SELECT codigo FROM receta WHERE producto IN ('GLLT','GLLTS')
+);
+DELETE FROM receta WHERE producto IN ('GLLT','GLLTS');
+DELETE FROM producto WHERE codigo IN ('GLLT','GLLTS');

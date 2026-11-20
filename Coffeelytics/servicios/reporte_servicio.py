@@ -49,6 +49,11 @@ class ReporteServicio:
             repo = ConsultasRepositorio(cursor)
             return repo.mermas_ultima_semana()
 
+    def consulta_3_merma_por_folio(self, folio):
+        with transaccion(dictionary=True) as cursor:
+            repo = ConsultasRepositorio(cursor)
+            return repo.merma_por_folio(folio)
+
     def consulta_4_ventas_por_empleado_fecha(self, num_empleado, fecha_str):
         with transaccion(dictionary=True) as cursor:
             repo = ConsultasRepositorio(cursor)

@@ -42,4 +42,4 @@ class MermaServicio:
         except (ValidacionError, StockInsuficienteError) as e:
             return False, str(e)
         except Error as e:
-            return False, f"Error al registrar merma: {e.msg}"
+            return False, f"Error al registrar merma: {str(e)}"

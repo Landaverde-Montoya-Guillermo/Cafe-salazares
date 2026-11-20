@@ -29,7 +29,7 @@ class VentaServicio:
                     cant = Decimal(str(item["cantidad"]))
                     receta = prod_repo.obtener_receta(prod.codigo)
                     for ing in receta:
-                        cod_ins = ing["codigo"]
+                        cod_ins = ing["insumo_codigo"]
                         req = Decimal(str(ing["requerido"])) * cant
                         consumo_total[cod_ins] = consumo_total.get(cod_ins, Decimal("0")) + req
 
@@ -76,4 +76,4 @@ class VentaServicio:
         except StockInsuficienteError as e:
             return False, str(e), None
         except Error as e:
-            return False, f"Error en venta: {e.msg}", None
+            return False, f"Error en venta: {str(e)}", None

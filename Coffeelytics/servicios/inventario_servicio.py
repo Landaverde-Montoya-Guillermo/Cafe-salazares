@@ -50,4 +50,4 @@ class InventarioServicio:
         except ValidacionError as e:
             return False, str(e)
         except Error as e:
-            return False, f"Error al registrar insumo: {e.msg}"
+            return False, f"Error al registrar insumo: {str(e)}"

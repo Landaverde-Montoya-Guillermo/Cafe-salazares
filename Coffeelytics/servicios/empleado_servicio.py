@@ -31,7 +31,7 @@ class EmpleadoServicio:
         except ValidacionError as e:
             return False, str(e)
         except Error as e:
-            return False, f"Error de base de datos al crear cuenta: {e.msg}"
+            return False, f"Error de base de datos al crear cuenta: {str(e)}"
 
     def desactivar_cuenta(self, num_empleado):
         if int(num_empleado) == 1:
@@ -40,7 +40,8 @@ class EmpleadoServicio:
             with transaccion() as cursor:
                 repo = EmpleadoRepositorio(cursor)
                 return repo.desactivar(num_empleado)
-        except Error:
+        except Error as e:
+            print(f"Error al desactivar cuenta: {str(e)}")
             return False
 
     def listar_empleados(self):
